@@ -2,12 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, test ]
   pull_request:
     branches: [ master ]
 
 env:
-  PROJECT_NAME: zint  
+  PROJECT_NAME: zint
+  FUZZING_SERVER_ADDRESS: grpc-api.demo.code-intelligence.com:443
+  DASHBOARD_ADDRESS: https://app.demo.code-intelligence.com 
+  REPORT_EMAIL: yakdan@code-intelligence.com
 
 jobs:
   fuzz_ean_fuzzer:
@@ -17,31 +20,31 @@ jobs:
         name: Build and Instrument
         uses: CodeIntelligenceTesting/github-actions/start-fuzzing@master
         with:
-          cognito_user: ${{ secrets.COGNITO_USER }}
-          cognito_password: ${{ secrets.COGNITO_PASSWORD }}
+          ci_fuzz_api_token: ${{ secrets.CI_FUZZ_API_TOKEN }}
           project: ${{ env.PROJECT_NAME }}
           test_collection: "ean_fuzzer"
-          git_reference: ${{ github.sha }}          
+          git_reference: ${{ github.sha }}
+          fuzzing_server_address: ${{ env.FUZZING_SERVER_ADDRESS }}          
+          report_email: ${{ env.REPORT_EMAIL }}
       - id: monitor-fuzzing
         name: Fuzzing
         uses: CodeIntelligenceTesting/github-actions/monitor-fuzzing@master
         with:
-          cognito_user: ${{ secrets.COGNITO_USER }}
-          cognito_password: ${{ secrets.COGNITO_PASSWORD }}
+          ci_fuzz_api_token: ${{ secrets.CI_FUZZ_API_TOKEN }}
           project: ${{ env.PROJECT_NAME }}
           test_collection_run: ${{ steps.start-fuzzing.outputs.test_collection_run }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           pull_request_number: ${{ github.event.pull_request.number }}
           owner: ${{ github.event.repository.owner.login }}
           repository: ${{ github.event.repository.name }}
-          timeout: 60
+          fuzzing_server_address: ${{ env.FUZZING_SERVER_ADDRESS }}
+          dashboard:address: ${{ env.DASHBOARD_ADDRESS }}
       - id: report-coverage
         name: Report Coverage
         uses: CodeIntelligenceTesting/github-actions/report-coverage@master
         if: ${{ github.event_name == 'pull_request' && (success() || failure()) }}
         with:
-          cognito_user: ${{ secrets.COGNITO_USER }}
-          cognito_password: ${{ secrets.COGNITO_PASSWORD }}
+          ci_fuzz_api_token: ${{ secrets.CI_FUZZ_API_TOKEN }}
           project: ${{ env.PROJECT_NAME }}
           test_collection: "ean_fuzzer"
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -49,4 +52,6 @@ jobs:
           owner: ${{ github.event.repository.owner.login }}
           repository: ${{ github.event.repository.name }}
           git_reference: ${{ github.sha }}
+          fuzzing_server_address: ${{ env.FUZZING_SERVER_ADDRESS }}
+          dashboard:address: ${{ env.DASHBOARD_ADDRESS }}
           
